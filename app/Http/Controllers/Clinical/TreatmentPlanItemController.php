@@ -25,12 +25,19 @@ class TreatmentPlanItemController extends Controller
             'price_list_id' => 'nullable|exists:price_lists,id',
         ]);
 
-        $priceList = $data['price_list_id']
-            ? PriceList::find($data['price_list_id'])
+        $priceListId = $data['price_list_id'] ?? null;
+        $priceList = $priceListId
+            ? PriceList::find($priceListId)
             : null;
 
         try {
-            $this->svc->addItem($treatmentPlan, $data['service_id'], $data['tooth_number'], $data['quantity'], $priceList);
+            $this->svc->addItem(
+                $treatmentPlan,
+                $data['service_id'],
+                $data['tooth_number'] ?? null,
+                $data['quantity'],
+                $priceList
+            );
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
@@ -50,7 +57,13 @@ class TreatmentPlanItemController extends Controller
         ]);
 
         try {
-            $this->svc->updateItem($treatmentPlanItem, $data['quantity'], $data['unit_price'], $data['tooth_number'], $data['notes'] ?? null);
+            $this->svc->updateItem(
+                $treatmentPlanItem,
+                $data['quantity'],
+                $data['unit_price'],
+                $data['tooth_number'] ?? null,
+                $data['notes'] ?? null
+            );
         } catch (\RuntimeException $e) {
             return back()->with('error', $e->getMessage());
         }
