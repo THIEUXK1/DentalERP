@@ -8,6 +8,7 @@ use App\Models\PatientDebt;
 use App\Models\PatientInvoice;
 use App\Models\PatientPayment;
 use App\Models\TreatmentPlan;
+use App\Services\Hkd\HkdJournalService;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceService
@@ -89,6 +90,9 @@ class InvoiceService
             if ($invoiceStatus === InvoiceStatus::Paid) {
                 (new CommissionService)->calculateForInvoice($invoice->fresh());
             }
+
+            // Ghi sổ doanh thu + sổ tiền TT152 (bỏ qua nếu chi nhánh không có HKD profile)
+            app(HkdJournalService::class)->postRevenue($payment);
 
             return $payment;
         });

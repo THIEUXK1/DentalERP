@@ -40,6 +40,18 @@ class RolePermissionSeeder extends Seeder
             'expenses.view', 'expenses.manage',
             // Settings
             'settings.view', 'settings.manage',
+            // Fixed Assets
+            'fixed_assets.view', 'fixed_assets.manage',
+            // Inventory (Kho vật tư)
+            'inventory.view', 'inventory.manage',
+            // Labo
+            'labo.view', 'labo.manage',
+            // Accounting
+            'accounting.view', 'accounting.manage',
+            // HKD (Hộ kinh doanh — TT152/2025)
+            'hkd.view', 'hkd.manage',
+            // Dental specialty + KPI
+            'dental.view', 'dental.manage', 'dental.kpi.view', 'dental.kpi.manage',
             // Admin
             'admin.users', 'admin.roles', 'admin.audit_log',
         ];
@@ -64,6 +76,12 @@ class RolePermissionSeeder extends Seeder
                 'reports.view', 'reports.financial', 'reports.clinical',
                 'commissions.view', 'commissions.manage',
                 'expenses.view', 'expenses.manage',
+                'fixed_assets.view', 'fixed_assets.manage',
+                'inventory.view', 'inventory.manage',
+                'labo.view', 'labo.manage',
+                'accounting.view',
+                'hkd.view', 'hkd.manage',
+                'dental.view', 'dental.manage', 'dental.kpi.view', 'dental.kpi.manage',
                 'settings.view',
             ],
 
@@ -90,6 +108,8 @@ class RolePermissionSeeder extends Seeder
                 'services.view',
                 'reports.clinical',
                 'commissions.view',
+                'labo.view', 'labo.manage',
+                'dental.view', 'dental.manage', 'dental.kpi.view',
             ],
 
             'assistant' => [
@@ -97,6 +117,7 @@ class RolePermissionSeeder extends Seeder
                 'appointments.view',
                 'treatment_plans.view',
                 'clinical_notes.create',
+                'dental.view',
             ],
 
             'cashier' => [
@@ -113,12 +134,18 @@ class RolePermissionSeeder extends Seeder
                 'reports.view', 'reports.financial',
                 'commissions.view', 'commissions.manage',
                 'expenses.view', 'expenses.manage',
+                'fixed_assets.view', 'fixed_assets.manage',
+                'inventory.view', 'inventory.manage',
+                'accounting.view', 'accounting.manage',
+                'hkd.view', 'hkd.manage',
+                'dental.kpi.view', 'dental.kpi.manage',
                 'settings.view',
             ],
 
             'warehouse' => [
                 'patients.view',
                 'services.view',
+                'inventory.view', 'inventory.manage',
             ],
 
             'marketing' => [

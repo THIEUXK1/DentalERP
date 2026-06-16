@@ -8,7 +8,11 @@
                     <h3 class="text-sm font-semibold text-gray-700 capitalize mb-4">{{ groupLabel(group) }}</h3>
                     <div class="space-y-4">
                         <FormInput v-for="(meta, key) in keys" :key="key" :label="meta.label">
-                            <input
+                            <select v-if="meta.type === 'select'" v-model="form[key]"
+                                class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
+                                <option v-for="(optLabel, val) in meta.options" :key="val" :value="val">{{ optLabel }}</option>
+                            </select>
+                            <input v-else
                                 v-model="form[key]"
                                 :type="meta.type"
                                 class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none"
@@ -53,7 +57,7 @@ function submit() {
     });
 }
 
-const groupLabels = { clinic: 'Thông tin phòng khám', schedule: 'Lịch làm việc' };
+const groupLabels = { clinic: 'Thông tin phòng khám', schedule: 'Lịch làm việc', accounting: 'Chế độ kế toán' };
 function groupLabel(group) {
     return groupLabels[group] ?? group;
 }

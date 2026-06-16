@@ -7,6 +7,7 @@ use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
 use App\Models\Expense;
+use App\Services\Hkd\HkdJournalService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -75,7 +76,10 @@ class ExpenseController extends Controller
             'notes' => 'nullable|string|max:1000',
         ]);
 
-        Expense::create([...$data, 'created_by' => auth()->id()]);
+        $expense = Expense::create([...$data, 'created_by' => auth()->id()]);
+
+        // Ghi sổ chi phí + sổ tiền TT152
+        app(HkdJournalService::class)->postExpense($expense);
 
         return back()->with('success', 'Đã ghi nhận phiếu chi.');
     }

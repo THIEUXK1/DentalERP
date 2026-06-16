@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Enums\CommissionStatus;
 use App\Enums\CommissionType;
+use App\Enums\KpiAllocationStatus;
 use App\Models\CommissionRule;
 use App\Models\CommissionTransaction;
+use App\Models\KpiAllocation;
 use App\Models\PatientInvoice;
 
 class CommissionService
@@ -13,16 +15,30 @@ class CommissionService
     /**
      * Calculate and record commissions when an invoice is fully paid.
      * Called from InvoiceService::addPayment after status becomes Paid.
+     *
+     * Guard: employees who already have KpiAllocation records (via DentalKpiService)
+     * for any item in this invoice's treatment plan are skipped — they receive
+     * operational KPI instead of a flat commission to avoid double-counting.
      */
     public function calculateForInvoice(PatientInvoice $invoice): void
     {
-        // Skip if already has commission records for this invoice
+        // Idempotent: skip if already processed
         if (CommissionTransaction::where('invoice_id', $invoice->id)->exists()) {
             return;
         }
 
         $plan = $invoice->treatmentPlan;
         $period = now()->format('Y-m');
+
+        // Employees who have KPI allocations for this treatment plan's items
+        // (any non-reversed status) are managed by DentalKpiService — skip them.
+        $kpiEmployeeIds = $plan
+            ? KpiAllocation::whereHas('planItem', fn ($q) => $q->where('treatment_plan_id', $plan->id))
+                ->whereNotIn('status', [KpiAllocationStatus::Reversed->value])
+                ->pluck('employee_id')
+                ->unique()
+                ->all()
+            : [];
 
         // Collect doctor_id + consultant_id from treatment plan
         $employeeIds = array_filter(
@@ -31,6 +47,11 @@ class CommissionService
         );
 
         foreach (array_unique($employeeIds) as $employeeId) {
+            // Skip: this employee's KPI is handled by DentalKpiService
+            if (in_array($employeeId, $kpiEmployeeIds, true)) {
+                continue;
+            }
+
             $rules = CommissionRule::where('employee_id', $employeeId)
                 ->where('is_active', true)
                 ->get();
@@ -45,12 +66,12 @@ class CommissionService
                 }
 
                 CommissionTransaction::create([
-                    'employee_id' => $employeeId,
-                    'invoice_id' => $invoice->id,
+                    'employee_id'       => $employeeId,
+                    'invoice_id'        => $invoice->id,
                     'treatment_plan_id' => $plan?->id,
-                    'amount' => $amount,
-                    'period' => $period,
-                    'status' => CommissionStatus::Pending,
+                    'amount'            => $amount,
+                    'period'            => $period,
+                    'status'            => CommissionStatus::Pending,
                 ]);
             }
         }

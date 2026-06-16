@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Reports;
 
 use App\Http\Controllers\Controller;
 use App\Models\Branch;
+use App\Models\FundAccount;
 use App\Services\ReportService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -86,6 +87,49 @@ class ReportController extends Controller
         ]);
     }
 
+    public function cashflow(Request $request): Response
+    {
+        $this->authorize('reports.financial');
+
+        $from          = $request->from ?? now()->startOfMonth()->toDateString();
+        $to            = $request->to ?? now()->toDateString();
+        $fundAccountId = $request->fund_account_id;
+
+        $rows = $this->svc->cashflowByDay($from, $to, $fundAccountId);
+
+        $totalIncome  = array_sum(array_column($rows, 'income'));
+        $totalExpense = array_sum(array_column($rows, 'expense'));
+
+        $fundAccounts = FundAccount::where('is_active', true)->orderBy('name')->get()
+            ->map(fn ($f) => ['id' => $f->id, 'name' => $f->name, 'type_label' => $f->typeLabel(), 'current_balance' => $f->currentBalance()]);
+
+        return Inertia::render('Reports/Cashflow', [
+            'rows'          => $rows,
+            'totalIncome'   => $totalIncome,
+            'totalExpense'  => $totalExpense,
+            'net'           => $totalIncome - $totalExpense,
+            'fundAccounts'  => $fundAccounts,
+            'filters'       => compact('from', 'to', 'fundAccountId'),
+        ]);
+    }
+
+    public function performance(Request $request): Response
+    {
+        $this->authorize('reports.financial');
+
+        $period   = $request->period ?? now()->format('Y-m');
+        $branchId = $request->branch_id;
+
+        $rows = $this->svc->employeePerformance($period, $branchId);
+
+        return Inertia::render('Reports/Performance', [
+            'rows'     => $rows,
+            'period'   => $period,
+            'branches' => Branch::where('is_active', true)->get()->map(fn ($b) => ['id' => $b->id, 'name' => $b->name]),
+            'filters'  => compact('period', 'branchId'),
+        ]);
+    }
+
     public function debt(Request $request): Response
     {
         $this->authorize('reports.financial');
@@ -104,6 +148,74 @@ class ReportController extends Controller
             'totalOutstanding' => array_sum(array_column($rows, 'remaining')),
             'branches' => Branch::where('is_active', true)->get()->map(fn ($b) => ['id' => $b->id, 'name' => $b->name]),
             'filters' => ['branch_id' => $branchId],
+        ]);
+    }
+
+    public function vatReport(Request $request): Response
+    {
+        $this->authorize('accounting.view');
+
+        $from     = $request->from ?? now()->startOfMonth()->toDateString();
+        $to       = $request->to ?? now()->toDateString();
+        $branchId = $request->branch_id;
+
+        $data = $this->svc->vatReport($from, $to, $branchId);
+
+        return Inertia::render('Reports/VatReport', [
+            ...$data,
+            'branches' => Branch::where('is_active', true)->get()->map(fn ($b) => ['id' => $b->id, 'name' => $b->name]),
+            'filters'  => compact('from', 'to', 'branchId'),
+        ]);
+    }
+
+    public function generalLedger(Request $request): Response
+    {
+        $this->authorize('accounting.view');
+
+        $from     = $request->from ?? now()->startOfMonth()->toDateString();
+        $to       = $request->to ?? now()->toDateString();
+        $branchId = $request->branch_id;
+
+        $data = $this->svc->generalLedger($from, $to, $branchId);
+
+        return Inertia::render('Reports/GeneralLedger', [
+            ...$data,
+            'branches' => Branch::where('is_active', true)->get()->map(fn ($b) => ['id' => $b->id, 'name' => $b->name]),
+            'filters'  => compact('from', 'to', 'branchId'),
+        ]);
+    }
+
+    public function reconciliation(Request $request): Response
+    {
+        $this->authorize('reports.financial');
+
+        $period   = $request->period ?? now()->format('Y-m');
+        $branchId = $request->branch_id;
+
+        $revenue  = $this->svc->revenueReconciliation($period, $branchId);
+        $payroll  = $this->svc->payrollReconciliation($period, $branchId);
+
+        return Inertia::render('Reports/Reconciliation', [
+            'revenue'  => $revenue,
+            'payroll'  => $payroll,
+            'branches' => Branch::where('is_active', true)->get()->map(fn ($b) => ['id' => $b->id, 'name' => $b->name]),
+            'filters'  => compact('period', 'branchId'),
+        ]);
+    }
+
+    public function kpiSummary(Request $request): Response
+    {
+        $this->authorize('reports.financial');
+
+        $period   = $request->period ?? now()->format('Y-m');
+        $branchId = $request->branch_id;
+
+        $data = $this->svc->kpiSummary($period, $branchId);
+
+        return Inertia::render('Reports/KpiSummary', [
+            ...$data,
+            'branches' => Branch::where('is_active', true)->get()->map(fn ($b) => ['id' => $b->id, 'name' => $b->name]),
+            'filters'  => compact('period', 'branchId'),
         ]);
     }
 }

@@ -14,15 +14,16 @@ class Patient extends Model
 
     protected $fillable = [
         'code', 'full_name', 'phone', 'email', 'dob', 'gender', 'address',
-        'source', 'allergies', 'medical_history', 'emergency_contact',
-        'branch_id', 'notes', 'is_active',
+        'source', 'allergies', 'medical_history', 'medical_flags', 'photo_path',
+        'emergency_contact', 'branch_id', 'notes', 'is_active',
     ];
 
     protected function casts(): array
     {
         return [
-            'dob' => 'date',
-            'is_active' => 'boolean',
+            'dob'           => 'date',
+            'is_active'     => 'boolean',
+            'medical_flags' => 'array',
         ];
     }
 
@@ -61,6 +62,31 @@ class Patient extends Model
     public function toothConditions()
     {
         return $this->hasMany(ToothCondition::class);
+    }
+
+    public function invoices()
+    {
+        return $this->hasMany(PatientInvoice::class)->orderByDesc('created_at');
+    }
+
+    public function treatmentPlans()
+    {
+        return $this->hasMany(TreatmentPlan::class)->orderByDesc('created_at');
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(PatientAttachment::class)->orderByDesc('created_at');
+    }
+
+    public function consentForms()
+    {
+        return $this->hasMany(ConsentForm::class)->orderByDesc('created_at');
+    }
+
+    public function relationships()
+    {
+        return $this->hasMany(PatientRelationship::class)->with('relatedPatient');
     }
 
     public function scopeByBranch(Builder $q, int $branchId): Builder

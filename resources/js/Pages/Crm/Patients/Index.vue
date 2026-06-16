@@ -1,66 +1,190 @@
 <template>
     <AppLayout title="Khách hàng">
-        <div class="space-y-4">
+        <div class="space-y-5">
+
+            <!-- ── Header ───────────────────────────────────────────────── -->
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-gray-800">Danh sách khách hàng</h2>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-900">Danh sách khách hàng</h2>
+                    <p class="text-sm text-gray-500 mt-0.5">Quản lý toàn bộ hồ sơ bệnh nhân</p>
+                </div>
                 <Link v-if="can('patients.create')" :href="route('patients.create')"
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700">
-                    + Thêm khách hàng
+                    class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 font-medium shadow-sm">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                    Thêm khách hàng
                 </Link>
             </div>
 
-            <div class="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap gap-3">
-                <input v-model="search" @keyup.enter="applyFilters" placeholder="Tên, SĐT hoặc mã KH..."
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64 focus:ring-2 focus:ring-primary-500 focus:outline-none" />
-                <select v-model="branchId" @change="applyFilters"
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
-                    <option value="">Tất cả chi nhánh</option>
-                    <option v-for="b in branches" :key="b.id" :value="b.id">{{ b.name }}</option>
-                </select>
-                <select v-model="source" @change="applyFilters"
-                    class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
-                    <option value="">Tất cả nguồn</option>
-                    <option v-for="s in sources" :key="s.value" :value="s.value">{{ s.label }}</option>
-                </select>
+            <!-- ── View toggle + stats bar ─────────────────────────────── -->
+            <div class="bg-slate-800 rounded-xl px-5 py-3 flex flex-wrap items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400 text-xs">Tổng KH</span>
+                    <span class="font-bold text-white text-lg">{{ patients.meta?.total ?? patients.data.length }}</span>
+                </div>
+                <div class="h-4 w-px bg-slate-600"></div>
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-400 text-xs">Kết quả lọc</span>
+                    <span class="font-bold text-indigo-300">{{ patients.data.length }}</span>
+                </div>
+                <div class="ml-auto flex items-center gap-1">
+                    <button @click="viewMode = 'table'"
+                        :class="['p-1.5 rounded-lg transition-colors', viewMode === 'table' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white']">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+                        </svg>
+                    </button>
+                    <button @click="viewMode = 'card'"
+                        :class="['p-1.5 rounded-lg transition-colors', viewMode === 'card' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white']">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
-            <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50 text-gray-600">
-                        <tr>
-                            <th class="px-4 py-3 text-left font-medium">Mã</th>
-                            <th class="px-4 py-3 text-left font-medium">Họ tên</th>
-                            <th class="px-4 py-3 text-left font-medium">SĐT</th>
-                            <th class="px-4 py-3 text-left font-medium">Nguồn</th>
-                            <th class="px-4 py-3 text-left font-medium">Chi nhánh</th>
-                            <th class="px-4 py-3 text-left font-medium">Ngày tạo</th>
-                            <th class="px-4 py-3 text-right font-medium">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-gray-100">
-                        <tr v-if="patients.data.length === 0">
-                            <td colspan="7" class="text-center py-8 text-gray-400">Chưa có khách hàng</td>
-                        </tr>
-                        <tr v-for="p in patients.data" :key="p.id" class="hover:bg-gray-50">
-                            <td class="px-4 py-3 font-mono text-xs text-gray-600">{{ p.code }}</td>
-                            <td class="px-4 py-3 font-medium text-gray-900">
-                                <Link :href="route('patients.show', p.id)" class="hover:text-primary-600">{{ p.full_name }}</Link>
-                            </td>
-                            <td class="px-4 py-3 text-gray-600">{{ p.phone }}</td>
-                            <td class="px-4 py-3">
-                                <StatusBadge v-if="p.source" color="blue">{{ p.source }}</StatusBadge>
-                                <span v-else class="text-gray-400">—</span>
-                            </td>
-                            <td class="px-4 py-3 text-gray-500">{{ p.branch ?? '—' }}</td>
-                            <td class="px-4 py-3 text-gray-500 text-xs">{{ p.created_at }}</td>
-                            <td class="px-4 py-3 text-right flex justify-end gap-2">
-                                <Link :href="route('patients.show', p.id)" class="text-primary-600 text-xs font-medium">Xem</Link>
-                                <Link v-if="can('patients.edit')" :href="route('patients.edit', p.id)" class="text-gray-500 text-xs font-medium hover:text-gray-700">Sửa</Link>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <!-- ── Filters ───────────────────────────────────────────────── -->
+            <div class="bg-white rounded-xl border border-gray-200 px-4 py-3 flex flex-wrap gap-3 items-end">
+                <div>
+                    <label class="text-xs text-gray-500 mb-1 block">Tìm kiếm</label>
+                    <div class="relative">
+                        <svg class="absolute left-3 top-2.5 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <input v-model="search" @keyup.enter="applyFilters" placeholder="Tên, SĐT, mã KH..."
+                            class="border border-gray-300 rounded-lg pl-9 pr-3 py-2 text-sm w-60 focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                    </div>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 mb-1 block">Chi nhánh</label>
+                    <select v-model="branchId" @change="applyFilters"
+                        class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="">Tất cả</option>
+                        <option v-for="b in branches" :key="b.id" :value="b.id">{{ b.name }}</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs text-gray-500 mb-1 block">Nguồn</label>
+                    <select v-model="source" @change="applyFilters"
+                        class="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="">Tất cả nguồn</option>
+                        <option v-for="s in sources" :key="s.value" :value="s.value">{{ s.label }}</option>
+                    </select>
+                </div>
+                <button @click="applyFilters"
+                    class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 font-medium self-end">
+                    Lọc
+                </button>
+                <button v-if="search || branchId || source" @click="clearFilters"
+                    class="px-3 py-2 text-gray-500 text-sm rounded-lg border border-gray-200 hover:bg-gray-50 self-end">
+                    Xóa lọc
+                </button>
             </div>
+
+            <!-- ── TABLE VIEW ──────────────────────────────────────────── -->
+            <div v-if="viewMode === 'table'" class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                <div v-if="patients.data.length === 0" class="flex flex-col items-center py-14 text-gray-400">
+                    <svg class="w-12 h-12 mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <p class="text-sm font-medium">Chưa có khách hàng</p>
+                </div>
+                <div v-else class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead class="bg-gray-50 text-gray-500 text-xs border-b border-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left font-medium">Khách hàng</th>
+                                <th class="px-4 py-3 text-left font-medium hidden sm:table-cell">SĐT</th>
+                                <th class="px-4 py-3 text-left font-medium hidden md:table-cell">Nguồn</th>
+                                <th class="px-4 py-3 text-left font-medium hidden lg:table-cell">Chi nhánh</th>
+                                <th class="px-4 py-3 text-left font-medium hidden lg:table-cell">Ngày tạo</th>
+                                <th class="px-4 py-3 text-right font-medium">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-50">
+                            <tr v-for="p in patients.data" :key="p.id" class="hover:bg-blue-50/20 transition-colors">
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center gap-3">
+                                        <div :class="['w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0', avatarColor(p.full_name)]">
+                                            {{ p.full_name.charAt(0) }}
+                                        </div>
+                                        <div>
+                                            <Link :href="route('patients.show', p.id)" class="font-semibold text-gray-900 hover:text-indigo-600">
+                                                {{ p.full_name }}
+                                            </Link>
+                                            <p class="text-xs text-gray-400 font-mono">{{ p.code }}</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">{{ p.phone }}</td>
+                                <td class="px-4 py-3 hidden md:table-cell">
+                                    <span v-if="p.source" :class="['text-xs px-2 py-0.5 rounded-full font-medium', sourceClass(p.source)]">
+                                        {{ p.source }}
+                                    </span>
+                                    <span v-else class="text-gray-300">—</span>
+                                </td>
+                                <td class="px-4 py-3 text-gray-500 hidden lg:table-cell">{{ p.branch ?? '—' }}</td>
+                                <td class="px-4 py-3 text-gray-400 text-xs hidden lg:table-cell">{{ p.created_at }}</td>
+                                <td class="px-4 py-3 text-right">
+                                    <div class="flex items-center gap-1.5 justify-end">
+                                        <Link :href="route('patients.show', p.id)"
+                                            class="px-2.5 py-1 text-xs bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 font-medium">
+                                            Xem
+                                        </Link>
+                                        <Link v-if="can('patients.edit')" :href="route('patients.edit', p.id)"
+                                            class="px-2.5 py-1 text-xs bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100">
+                                            Sửa
+                                        </Link>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ── CARD VIEW ───────────────────────────────────────────── -->
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div v-if="patients.data.length === 0" class="col-span-full text-center py-14 text-gray-400">
+                    Chưa có khách hàng
+                </div>
+                <Link v-for="p in patients.data" :key="p.id"
+                    :href="route('patients.show', p.id)"
+                    class="bg-white rounded-xl border border-gray-200 p-4 hover:border-indigo-200 hover:shadow-md transition-all group">
+                    <div class="flex items-start gap-3 mb-3">
+                        <div :class="['w-10 h-10 rounded-full flex items-center justify-center text-base font-bold text-white flex-shrink-0 shadow-sm', avatarColor(p.full_name)]">
+                            {{ p.full_name.charAt(0) }}
+                        </div>
+                        <div class="min-w-0">
+                            <p class="font-semibold text-gray-900 group-hover:text-indigo-700 truncate">{{ p.full_name }}</p>
+                            <p class="text-xs text-gray-400 font-mono">{{ p.code }}</p>
+                        </div>
+                    </div>
+                    <div class="space-y-1 text-xs text-gray-500">
+                        <div class="flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                            </svg>
+                            {{ p.phone }}
+                        </div>
+                        <div v-if="p.branch" class="flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                            {{ p.branch }}
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                        <span v-if="p.source" :class="['text-xs px-2 py-0.5 rounded-full font-medium', sourceClass(p.source)]">
+                            {{ p.source }}
+                        </span>
+                        <span v-else class="text-xs text-gray-300">—</span>
+                        <span class="text-xs text-gray-400">{{ p.created_at }}</span>
+                    </div>
+                </Link>
+            </div>
+
             <Pagination :links="patients.links" :meta="patients.meta" @navigate="url => router.get(url)" />
         </div>
     </AppLayout>
@@ -70,17 +194,47 @@
 import { ref } from 'vue';
 import { router, Link } from '@inertiajs/vue3';
 import AppLayout from '@/Components/Layout/AppLayout.vue';
-import StatusBadge from '@/Components/Shared/StatusBadge.vue';
 import Pagination from '@/Components/Shared/Pagination.vue';
 import { usePermission } from '@/composables/usePermission';
 
 const { hasPermission: can } = usePermission();
 const props = defineProps({ patients: Object, branches: Array, sources: Array, filters: Object });
+
 const search   = ref(props.filters.search ?? '');
 const branchId = ref(props.filters.branch_id ?? '');
 const source   = ref(props.filters.source ?? '');
+const viewMode = ref('table'); // 'table' | 'card'
 
 function applyFilters() {
-    router.get(route('patients.index'), { search: search.value, branch_id: branchId.value, source: source.value }, { preserveState: true });
+    router.get(route('patients.index'), {
+        search:    search.value   || undefined,
+        branch_id: branchId.value || undefined,
+        source:    source.value   || undefined,
+    }, { preserveState: true });
+}
+
+function clearFilters() {
+    search.value = ''; branchId.value = ''; source.value = '';
+    applyFilters();
+}
+
+// Avatar color based on name initial
+const AVATAR_COLORS = [
+    'bg-indigo-500', 'bg-violet-500', 'bg-emerald-500', 'bg-blue-500',
+    'bg-rose-500', 'bg-amber-500', 'bg-teal-500', 'bg-pink-500',
+];
+function avatarColor(name) {
+    return AVATAR_COLORS[(name.charCodeAt(0) ?? 0) % AVATAR_COLORS.length];
+}
+
+function sourceClass(src) {
+    return {
+        facebook: 'bg-blue-100 text-blue-700',
+        zalo:     'bg-teal-100 text-teal-700',
+        google:   'bg-red-100 text-red-700',
+        referral: 'bg-purple-100 text-purple-700',
+        walk_in:  'bg-gray-100 text-gray-700',
+        other:    'bg-orange-100 text-orange-700',
+    }[src] ?? 'bg-gray-100 text-gray-600';
 }
 </script>

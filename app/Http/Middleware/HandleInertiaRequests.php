@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\AppNotification;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -37,6 +38,9 @@ class HandleInertiaRequests extends Middleware
             ],
             'notifications' => [
                 'unread' => fn () => $user ? AppNotification::where('user_id', $user->id)->unread()->count() : 0,
+            ],
+            'app' => [
+                'accounting_regime' => fn () => Setting::get('accounting.regime', 'TT152_HKD'),
             ],
         ];
     }

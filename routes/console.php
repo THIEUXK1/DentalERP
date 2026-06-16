@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // Daily appointment reminders at 8:00 AM Vietnam time
 Schedule::command('appointments:remind')->dailyAt('08:00')->timezone('Asia/Ho_Chi_Minh');
+
+// Pull attendance logs from all active ZKTeco devices nightly at 23:30
+Schedule::command('attendance:sync')->dailyAt('23:30')->timezone('Asia/Ho_Chi_Minh');

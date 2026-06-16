@@ -28,7 +28,7 @@
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                    <label class="text-xs text-gray-500 mb-1 block">Chẩn đoán</label>
+                    <TemplateFieldLabel label="Chẩn đoán" type="diagnosis" @pick="applyTemplate" />
                     <textarea v-model="form.diagnosis" rows="2"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none"></textarea>
                 </div>
@@ -40,12 +40,12 @@
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                    <label class="text-xs text-gray-500 mb-1 block">Đơn thuốc / Hướng dẫn</label>
+                    <TemplateFieldLabel label="Đơn thuốc / Hướng dẫn" type="prescription" @pick="applyTemplate" />
                     <textarea v-model="form.prescription" rows="2"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none"></textarea>
                 </div>
                 <div>
-                    <label class="text-xs text-gray-500 mb-1 block">Dặn dò tái khám</label>
+                    <TemplateFieldLabel label="Dặn dò tái khám" type="note" @pick="applyTemplate" />
                     <textarea v-model="form.next_visit_notes" rows="2"
                         class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none"></textarea>
                 </div>
@@ -97,9 +97,17 @@ const props = defineProps({
     canCreate:     { type: Boolean, default: false },
 });
 
-const showForm  = ref(false);
+const showForm   = ref(false);
 const submitting = ref(false);
-const form      = ref({ doctor_id: '', chief_complaint: '', diagnosis: '', treatment_done: '', prescription: '', next_visit_notes: '' });
+const form       = ref({ doctor_id: '', chief_complaint: '', diagnosis: '', treatment_done: '', prescription: '', next_visit_notes: '' });
+
+// Template field mapping: templateType → form field
+const FIELD_MAP = { diagnosis: 'diagnosis', prescription: 'prescription', note: 'next_visit_notes' };
+
+function applyTemplate({ type, content }) {
+    const field = FIELD_MAP[type];
+    if (field) form.value[field] = content;
+}
 
 function resetForm() {
     form.value = { doctor_id: '', chief_complaint: '', diagnosis: '', treatment_done: '', prescription: '', next_visit_notes: '' };
@@ -127,6 +135,82 @@ const NoteRow = defineComponent({
                 h('span', { class: 'text-gray-700 whitespace-pre-line' }, props.value),
               ])
             : null;
+    },
+});
+
+/**
+ * Inline label + "Chọn mẫu" dropdown for a given template type.
+ * Fetches templates lazily on first open; renders a small popover list.
+ */
+const TemplateFieldLabel = defineComponent({
+    props: { label: String, type: String },
+    emits: ['pick'],
+    setup(props, { emit }) {
+        const open      = ref(false);
+        const loading   = ref(false);
+        const templates = ref([]);
+        const q         = ref('');
+
+        async function fetchTemplates() {
+            if (templates.value.length && !q.value) return;
+            loading.value = true;
+            try {
+                const url = route('clinical.templates.search') + `?type=${props.type}&q=${encodeURIComponent(q.value)}`;
+                const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } });
+                templates.value = await res.json();
+            } finally {
+                loading.value = false;
+            }
+        }
+
+        function toggle() {
+            open.value = !open.value;
+            if (open.value) fetchTemplates();
+        }
+
+        function pick(t) {
+            emit('pick', { type: props.type, content: t.content });
+            open.value = false;
+            q.value = '';
+        }
+
+        return () => h('div', { class: 'flex items-center justify-between mb-1' }, [
+            h('span', { class: 'text-xs text-gray-500' }, props.label),
+            h('div', { class: 'relative' }, [
+                h('button', {
+                    type: 'button',
+                    onClick: toggle,
+                    class: 'text-xs text-indigo-500 hover:text-indigo-700 flex items-center gap-0.5',
+                }, '📋 Chọn mẫu'),
+                open.value ? h('div', {
+                    class: 'absolute right-0 top-6 z-30 bg-white border border-gray-200 rounded-lg shadow-lg w-64 max-h-48 overflow-y-auto',
+                }, [
+                    h('div', { class: 'p-2 border-b border-gray-100' },
+                        h('input', {
+                            value: q.value,
+                            onInput: (e) => { q.value = e.target.value; fetchTemplates(); },
+                            placeholder: 'Tìm mẫu...',
+                            class: 'w-full text-xs border border-gray-200 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-indigo-400',
+                        })
+                    ),
+                    loading.value
+                        ? h('p', { class: 'text-xs text-gray-400 p-3 text-center' }, 'Đang tải...')
+                        : templates.value.length === 0
+                            ? h('p', { class: 'text-xs text-gray-400 p-3 text-center' }, 'Không có mẫu')
+                            : templates.value.map(t =>
+                                h('button', {
+                                    key: t.id,
+                                    type: 'button',
+                                    onClick: () => pick(t),
+                                    class: 'w-full text-left px-3 py-2 text-xs hover:bg-indigo-50 border-b border-gray-50 last:border-0',
+                                }, [
+                                    h('p', { class: 'font-medium text-gray-700 truncate' }, t.title),
+                                    h('p', { class: 'text-gray-400 truncate mt-0.5' }, t.content.slice(0, 60) + (t.content.length > 60 ? '…' : '')),
+                                ])
+                            ),
+                ]) : null,
+            ]),
+        ]);
     },
 });
 </script>

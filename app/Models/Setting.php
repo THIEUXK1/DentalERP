@@ -36,6 +36,16 @@ class Setting extends Model
                 'schedule.default_duration' => ['label' => 'Thời lượng mặc định (phút)', 'type' => 'number'],
                 'schedule.working_hours' => ['label' => 'Giờ làm việc (VD: 08:00-17:00)', 'type' => 'text'],
             ],
+            'accounting' => [
+                'accounting.regime' => [
+                    'label'   => 'Chế độ kế toán',
+                    'type'    => 'select',
+                    'options' => [
+                        'TT152_HKD'        => 'Hộ kinh doanh (TT152/2025)',
+                        'TT133_ENTERPRISE' => 'Doanh nghiệp (TT133)',
+                    ],
+                ],
+            ],
         ];
     }
 }

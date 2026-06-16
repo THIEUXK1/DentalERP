@@ -18,6 +18,10 @@ class DatabaseSeeder extends Seeder
             ClinicalDemoSeeder::class,
             TreatmentPlanInvoiceSeeder::class,
             SettingSeeder::class,
+            DentalConditionSeeder::class,
+            KpiQualityRuleSeeder::class,
+            AttendanceSymbolSeeder::class,
+            PayrollSettingSeeder::class,
         ]);
     }
 }
