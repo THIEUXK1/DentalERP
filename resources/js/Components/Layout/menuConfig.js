@@ -131,9 +131,7 @@ export const menuConfig = [
                 icon: 'hkd-expense',
                 children: [
                     { label: 'Chi phí trả trước', route: 'cashier.expenses.prepaid', permission: 'expenses.view' },
-                    { label: 'Chi tiết chi phí', route: 'cashier.expenses.index', permission: 'expenses.view' },
-                    { label: 'Lợi nhuận đơn hàng', route: 'reports.order-profit', permission: 'reports.financial' },
-                    { label: 'Lợi nhuận dự án', route: 'reports.project-profit', permission: 'reports.financial' }
+                    { label: 'Chi tiết chi phí', route: 'cashier.expenses.index', permission: 'expenses.view' }
                 ]
             },
             {
