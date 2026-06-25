@@ -5,6 +5,19 @@
                 <h2 class="text-lg font-semibold text-gray-800">Hóa đơn khách hàng</h2>
             </div>
 
+            <!-- Filter banner -->
+            <div v-if="selected_patient" class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex items-center justify-between text-sm text-indigo-800 shadow-sm">
+                <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                    </svg>
+                    <span>Đang lọc hóa đơn của bệnh nhân: <strong class="text-indigo-950 font-semibold">{{ selected_patient.full_name }}</strong> (<span class="font-mono text-xs bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">{{ selected_patient.code }}</span>)</span>
+                </div>
+                <Link :href="route('cashier.invoices.index')" class="text-xs font-semibold bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-lg shadow-sm transition-colors">
+                    Xóa bộ lọc
+                </Link>
+            </div>
+
             <div class="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap gap-3">
                 <input v-model="search" @keyup.enter="applyFilters" placeholder="Tên hoặc SĐT khách hàng..."
                     class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-64 focus:ring-2 focus:ring-primary-500 focus:outline-none" />
@@ -65,11 +78,16 @@ import Pagination from '@/Components/Shared/Pagination.vue';
 import { useCurrency } from '@/composables/useCurrency';
 
 const { formatVnd } = useCurrency();
-const props = defineProps({ invoices: Object, statuses: Array, branches: Array, filters: Object });
+const props = defineProps({ invoices: Object, statuses: Array, branches: Array, filters: Object, selected_patient: Object });
 const search = ref(props.filters.search ?? '');
 const status = ref(props.filters.status ?? '');
+const patientId = ref(props.filters.patient_id ?? '');
 
 function applyFilters() {
-    router.get(route('cashier.invoices.index'), { search: search.value, status: status.value }, { preserveState: true });
+    router.get(route('cashier.invoices.index'), {
+        search: search.value,
+        status: status.value,
+        patient_id: patientId.value,
+    }, { preserveState: true });
 }
 </script>

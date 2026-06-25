@@ -26,7 +26,13 @@ class PatientInvoiceController extends Controller
             ->when($request->search, fn ($q, $v) => $q->whereHas('patient', fn ($pq) => $pq->where('full_name', 'ilike', "%{$v}%")->orWhere('phone', 'ilike', "%{$v}%")))
             ->when($request->status, fn ($q, $v) => $q->where('status', $v))
             ->when($request->branch_id, fn ($q, $v) => $q->where('branch_id', $v))
+            ->when($request->patient_id, fn ($q, $v) => $q->where('patient_id', $v))
             ->orderByDesc('id');
+
+        $selectedPatient = null;
+        if ($request->patient_id) {
+            $selectedPatient = \App\Models\Patient::find($request->patient_id);
+        }
 
         return Inertia::render('Cashier/Invoices/Index', [
             'invoices' => $query->paginate(20)->through(fn ($inv) => [
@@ -43,9 +49,14 @@ class PatientInvoiceController extends Controller
                 'amount_due' => $inv->amountDue(),
                 'created_at' => $inv->created_at->format('d/m/Y'),
             ]),
+            'selected_patient' => $selectedPatient ? [
+                'id' => $selectedPatient->id,
+                'code' => $selectedPatient->code,
+                'full_name' => $selectedPatient->full_name,
+            ] : null,
             'statuses' => collect(InvoiceStatus::cases())->map(fn ($s) => ['value' => $s->value, 'label' => $s->label(), 'color' => $s->color()]),
             'branches' => Branch::where('is_active', true)->get()->map(fn ($b) => ['id' => $b->id, 'name' => $b->name]),
-            'filters' => $request->only(['search', 'status', 'branch_id']),
+            'filters' => $request->only(['search', 'status', 'branch_id', 'patient_id']),
         ]);
     }
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Crm;
 
 use App\Enums\AttachmentType;
 use App\Enums\ContactType;
+use App\Enums\InvoiceStatus;
 use App\Enums\LeadSource;
 use App\Enums\RelationshipType;
 use App\Enums\ToothConditionType;
@@ -110,7 +111,9 @@ class PatientController extends Controller
             ->map(fn ($c) => ['value' => $c->value, 'label' => $c->label(), 'color' => $c->color()]);
 
         // ── Financial summary ───────────────────────────────────────────────
-        $invoices = PatientInvoice::where('patient_id', $patient->id)->get();
+        $invoices = PatientInvoice::where('patient_id', $patient->id)
+            ->where('status', '!=', InvoiceStatus::Cancelled->value)
+            ->get();
         $totalAmount = $invoices->sum('total');
         $amountPaid  = $invoices->sum('amount_paid');
         $amountDue   = max(0, $totalAmount - $amountPaid);

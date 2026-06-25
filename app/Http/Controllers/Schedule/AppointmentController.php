@@ -135,6 +135,14 @@ class AppointmentController extends Controller
     {
         $branchId = $appointment?->branch_id ?? $defaults['branch_id'] ?? null;
 
+        if (! $branchId && ! empty($defaults['patient_id'])) {
+            $patient = Patient::find($defaults['patient_id']);
+            if ($patient) {
+                $defaults['branch_id'] = $patient->branch_id;
+                $branchId = $patient->branch_id;
+            }
+        }
+
         return Inertia::render('Schedule/Appointments/Form', [
             'appointment' => $appointment ? [
                 'id' => $appointment->id,

@@ -56,7 +56,7 @@ class TreatmentPlanController extends Controller
         ]);
     }
 
-    public function create(): \Inertia\Response
+    public function create(Request $request): \Inertia\Response
     {
         $this->authorize('treatment_plans.create');
 
@@ -74,14 +74,100 @@ class TreatmentPlanController extends Controller
             'consultant_id' => 'nullable|exists:employees,id',
             'appointment_id' => 'nullable|exists:appointments,id',
             'notes' => 'nullable|string',
+            'diagnosis' => 'nullable|string|max:255',
+            'chief_complaint' => 'nullable|string|max:1000',
+            'treatment_goal' => 'nullable|string|max:255',
+            'start_date' => 'nullable|date',
+            'expected_end_date' => 'nullable|date',
+            'estimated_sessions' => 'nullable|integer|min:1',
+            'frequency' => 'nullable|string|max:255',
+            'priority' => 'nullable|string|max:50',
+            'status' => 'nullable|string|max:50',
+            'total_amount' => 'required|integer',
+            'discount_amount' => 'required|integer',
+            'action' => 'nullable|string',
+            
+            'items' => 'nullable|array',
+            'items.*.service_id' => 'required|exists:dental_services,id',
+            'items.*.tooth_number' => 'nullable|string|max:50',
+            'items.*.diagnosis' => 'nullable|string|max:255',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|integer|min:0',
+            'items.*.discount' => 'nullable|integer|min:0',
+            'items.*.amount' => 'required|integer|min:0',
+            'items.*.estimated_sessions' => 'nullable|integer|min:1',
+            'items.*.stage_name' => 'nullable|string|max:255',
+            'items.*.notes' => 'nullable|string|max:1000',
         ]);
 
-        $plan = TreatmentPlan::create([
-            ...$data,
-            'code' => TreatmentPlan::generateCode(),
-            'status' => TreatmentPlanStatus::Draft->value,
-            'created_by' => auth()->id(),
-        ]);
+        $plan = \Illuminate\Support\Facades\DB::transaction(function () use ($data) {
+            $planStatus = $data['status'] ?? TreatmentPlanStatus::Draft->value;
+            
+            $plan = TreatmentPlan::create([
+                'code' => TreatmentPlan::generateCode(),
+                'patient_id' => $data['patient_id'],
+                'branch_id' => $data['branch_id'],
+                'doctor_id' => $data['doctor_id'] ?? null,
+                'consultant_id' => $data['consultant_id'] ?? null,
+                'appointment_id' => $data['appointment_id'] ?? null,
+                'status' => $planStatus,
+                'total_amount' => $data['total_amount'],
+                'discount_amount' => $data['discount_amount'],
+                'notes' => $data['notes'] ?? null,
+                'diagnosis' => $data['diagnosis'] ?? null,
+                'chief_complaint' => $data['chief_complaint'] ?? null,
+                'treatment_goal' => $data['treatment_goal'] ?? null,
+                'start_date' => $data['start_date'] ?? null,
+                'expected_end_date' => $data['expected_end_date'] ?? null,
+                'estimated_sessions' => $data['estimated_sessions'] ?? null,
+                'frequency' => $data['frequency'] ?? null,
+                'priority' => $data['priority'] ?? 'normal',
+                'created_by' => auth()->id(),
+            ]);
+
+            foreach ($data['items'] ?? [] as $itemData) {
+                $service = \App\Models\DentalService::find($itemData['service_id']);
+                $plan->items()->create([
+                    'service_id' => $itemData['service_id'],
+                    'name' => $service->name,
+                    'tooth_number' => $itemData['tooth_number'] ?? null,
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $itemData['unit_price'],
+                    'subtotal' => $itemData['amount'],
+                    'discount' => $itemData['discount'] ?? 0,
+                    'amount' => $itemData['amount'],
+                    'estimated_sessions' => $itemData['estimated_sessions'] ?? null,
+                    'stage_name' => $itemData['stage_name'] ?? null,
+                    'notes' => $itemData['notes'] ?? null,
+                    'status' => 'pending',
+                ]);
+            }
+
+            if ($planStatus === TreatmentPlanStatus::Approved->value) {
+                $this->invoiceSvc->fromTreatmentPlan($plan);
+            }
+
+            return $plan;
+        });
+
+        $action = $data['action'] ?? 'show';
+        if ($action === 'appointment') {
+            return redirect()->route('schedule.appointments.create', [
+                'patient_id' => $plan->patient_id,
+                'branch_id' => $plan->branch_id,
+            ])->with('success', "Đã tạo kế hoạch điều trị {$plan->code}. Tiếp tục đặt lịch hẹn.");
+        }
+
+        if ($action === 'consent') {
+            return redirect()->route('patients.show', $plan->patient_id . '#consent')
+                ->with('success', "Đã tạo kế hoạch điều trị {$plan->code}. Tiếp tục ký phiếu đồng ý.");
+        }
+
+        if ($action === 'payment') {
+            return redirect()->route('cashier.invoices.index', [
+                'patient_id' => $plan->patient_id,
+            ])->with('success', "Đã tạo kế hoạch điều trị {$plan->code} và tự động tạo hóa đơn. Tiếp tục thanh toán.");
+        }
 
         return redirect()->route('clinical.treatment-plans.show', $plan)
             ->with('success', "Đã tạo kế hoạch điều trị {$plan->code}.");
@@ -115,6 +201,14 @@ class TreatmentPlanController extends Controller
                 'approved_at'      => $treatmentPlan->approved_at?->format('d/m/Y H:i'),
                 'payment_schedule' => $treatmentPlan->payment_schedule ?? [],
                 'created_at'       => $treatmentPlan->created_at->format('d/m/Y'),
+                'diagnosis'        => $treatmentPlan->diagnosis,
+                'chief_complaint'  => $treatmentPlan->chief_complaint,
+                'treatment_goal'   => $treatmentPlan->treatment_goal,
+                'start_date'       => $treatmentPlan->start_date?->format('d/m/Y'),
+                'expected_end_date'=> $treatmentPlan->expected_end_date?->format('d/m/Y'),
+                'estimated_sessions'=> $treatmentPlan->estimated_sessions,
+                'frequency'        => $treatmentPlan->frequency,
+                'priority'         => $treatmentPlan->priority,
             ],
             'items' => $treatmentPlan->items->map(fn ($i) => [
                 'id'           => $i->id,
@@ -127,6 +221,11 @@ class TreatmentPlanController extends Controller
                 'status_label' => $i->status->label(),
                 'status_color' => $i->status->color(),
                 'notes'        => $i->notes,
+                'diagnosis'    => $i->diagnosis,
+                'discount'     => $i->discount,
+                'amount'       => $i->amount,
+                'estimated_sessions' => $i->estimated_sessions,
+                'stage_name'   => $i->stage_name,
             ]),
             'services' => DentalService::where('is_active', true)->orderBy('name')->get()
                 ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'selling_price' => $s->selling_price]),
@@ -237,6 +336,9 @@ class TreatmentPlanController extends Controller
 
     private function form(?TreatmentPlan $plan = null): \Inertia\Response
     {
+        $patientId = request('patient_id') ? (int) request('patient_id') : null;
+        $selectedPatient = $patientId ? Patient::find($patientId) : null;
+
         return Inertia::render('Clinical/TreatmentPlans/Form', [
             'plan' => $plan ? [
                 'id' => $plan->id,
@@ -248,6 +350,8 @@ class TreatmentPlanController extends Controller
                 'appointment_id' => $plan->appointment_id,
                 'notes' => $plan->notes,
             ] : null,
+            'selected_patient_id' => $plan ? $plan->patient_id : $patientId,
+            'selected_branch_id' => $plan ? $plan->branch_id : ($selectedPatient ? $selectedPatient->branch_id : null),
             'patients' => Patient::where('is_active', true)->orderBy('full_name')->get()
                 ->map(fn ($p) => ['id' => $p->id, 'full_name' => $p->full_name, 'phone' => $p->phone, 'code' => $p->code]),
             'doctors' => Employee::doctors()->where('is_active', true)->get()
@@ -255,6 +359,8 @@ class TreatmentPlanController extends Controller
             'consultants' => Employee::where('role_type', 'consultant')->where('is_active', true)->get()
                 ->map(fn ($e) => ['id' => $e->id, 'name' => $e->full_name]),
             'branches' => Branch::where('is_active', true)->get()->map(fn ($b) => ['id' => $b->id, 'name' => $b->name]),
+            'services' => DentalService::where('is_active', true)->orderBy('name')->get()
+                ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'selling_price' => $s->selling_price]),
         ]);
     }
 }

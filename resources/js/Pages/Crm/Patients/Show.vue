@@ -220,7 +220,7 @@
 </template>
 
 <script setup>
-import { ref, computed, defineComponent } from 'vue';
+import { ref, computed, defineComponent, onMounted } from 'vue';
 import { Link, useForm, router } from '@inertiajs/vue3';
 import AppLayout from '@/Components/Layout/AppLayout.vue';
 import StatusBadge from '@/Components/Shared/StatusBadge.vue';
@@ -258,6 +258,15 @@ const props = defineProps({
 });
 
 const activeTab    = ref('info');
+
+onMounted(() => {
+    const hash = window.location.hash.replace('#', '');
+    const tabKeys = ['info', 'treatment', 'chart', 'clinical', 'attachments', 'consent', 'timeline'];
+    if (hash && tabKeys.includes(hash)) {
+        activeTab.value = hash;
+    }
+});
+
 const showActivity = ref(false);
 const actForm      = useForm({ type: 'note', content: '', patient_id: props.patient.id });
 

@@ -11,6 +11,7 @@ class TreatmentPlanItem extends Model
         'treatment_plan_id', 'service_id', 'name', 'tooth_number',
         'quantity', 'unit_price', 'subtotal', 'status', 'notes',
         'responsible_doctor_id', 'examination_id', 'started_at', 'completed_at',
+        'diagnosis', 'discount', 'amount', 'estimated_sessions', 'stage_name',
     ];
 
     protected function casts(): array

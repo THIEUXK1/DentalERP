@@ -15,6 +15,8 @@ class TreatmentPlan extends Model
         'code', 'patient_id', 'doctor_id', 'consultant_id', 'branch_id',
         'appointment_id', 'status', 'total_amount', 'discount_amount',
         'deposit_amount', 'notes', 'payment_schedule', 'created_by', 'approved_at',
+        'diagnosis', 'chief_complaint', 'treatment_goal', 'start_date', 'expected_end_date',
+        'estimated_sessions', 'frequency', 'priority',
     ];
 
     protected function casts(): array
@@ -23,6 +25,8 @@ class TreatmentPlan extends Model
             'status' => TreatmentPlanStatus::class,
             'approved_at' => 'datetime',
             'payment_schedule' => 'array',
+            'start_date' => 'date',
+            'expected_end_date' => 'date',
         ];
     }
 
