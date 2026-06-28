@@ -10,7 +10,7 @@ class TreatmentPlanItem extends Model
     protected $fillable = [
         'treatment_plan_id', 'service_id', 'name', 'tooth_number',
         'quantity', 'unit_price', 'subtotal', 'status', 'notes',
-        'responsible_doctor_id', 'examination_id', 'started_at', 'completed_at',
+        'responsible_doctor_id', 'assistant_doctor_id', 'examination_id', 'started_at', 'completed_at',
         'diagnosis', 'discount', 'amount', 'estimated_sessions', 'stage_name',
     ];
 
@@ -37,6 +37,11 @@ class TreatmentPlanItem extends Model
     public function responsibleDoctor()
     {
         return $this->belongsTo(Employee::class, 'responsible_doctor_id');
+    }
+
+    public function assistantDoctor()
+    {
+        return $this->belongsTo(Employee::class, 'assistant_doctor_id');
     }
 
     public function examination()

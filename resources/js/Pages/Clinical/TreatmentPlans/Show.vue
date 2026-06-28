@@ -1,6 +1,6 @@
 <template>
     <AppLayout :title="`KHDT: ${plan.code}`">
-        <div class="max-w-5xl space-y-4">
+        <div class="space-y-4">
 
             <!-- ── Header ───────────────────────────────────────────────────── -->
             <div class="bg-white rounded-xl border border-gray-200 px-5 py-4">
@@ -130,11 +130,31 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
+                            <!-- Discount -->
+                            <div>
+                                <label class="text-xs text-gray-500 mb-1 block">Giảm giá (₫)</label>
+                                <input v-model="addForm.discount" type="number" min="0"
+                                    class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none tabular-nums" />
+                            </div>
+                            <!-- Estimated sessions -->
+                            <div>
+                                <label class="text-xs text-gray-500 mb-1 block">Số buổi dự kiến</label>
+                                <input v-model="addForm.estimated_sessions" type="number" min="1" placeholder="VD: 3"
+                                    class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                            </div>
+                            <!-- Stage name -->
+                            <div>
+                                <label class="text-xs text-gray-500 mb-1 block">Giai đoạn / Đợt</label>
+                                <input v-model="addForm.stage_name" type="text" placeholder="VD: Giai đoạn 1"
+                                    class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                             <!-- Doctor (người thực hiện) -->
                             <div>
                                 <label class="text-xs text-gray-500 mb-1 block">Người thực hiện</label>
-                                <select v-model="addForm.doctor_id"
+                                <select v-model="addForm.responsible_doctor_id"
                                     class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                                     <option :value="null">-- Chọn bác sĩ --</option>
                                     <option v-for="d in doctors" :key="d.id" :value="d.id">{{ d.name }}</option>
@@ -143,11 +163,17 @@
                             <!-- Assistant (trợ thủ) -->
                             <div>
                                 <label class="text-xs text-gray-500 mb-1 block">Trợ thủ</label>
-                                <select v-model="addForm.assistant_id"
+                                <select v-model="addForm.assistant_doctor_id"
                                     class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                                     <option :value="null">-- Chọn trợ thủ --</option>
                                     <option v-for="d in doctors" :key="d.id" :value="d.id">{{ d.name }}</option>
                                 </select>
+                            </div>
+                            <!-- Diagnosis -->
+                            <div>
+                                <label class="text-xs text-gray-500 mb-1 block">Chẩn đoán</label>
+                                <input v-model="addForm.diagnosis" type="text" placeholder="Chẩn đoán dịch vụ này..."
+                                    class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
                             </div>
                         </div>
                         <!-- Notes -->
@@ -168,7 +194,7 @@
                     </div>
 
                     <!-- Items table -->
-                    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden overflow-x-auto">
                         <div class="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
                             <h3 class="text-sm font-semibold text-gray-700">Danh sách dịch vụ điều trị</h3>
                             <span class="text-xs text-gray-400">{{ items.length }} dịch vụ</span>
@@ -187,9 +213,10 @@
                                     <th class="px-4 py-2.5 text-center font-medium">Răng</th>
                                     <th class="px-4 py-2.5 text-center font-medium">SL</th>
                                     <th class="px-4 py-2.5 text-right font-medium">Đơn giá</th>
+                                    <th class="px-4 py-2.5 text-right font-medium">Giảm giá</th>
                                     <th class="px-4 py-2.5 text-right font-medium">Thành tiền</th>
                                     <th class="px-4 py-2.5 text-center font-medium">Trạng thái</th>
-                                    <th v-if="plan.is_editable || plan.status === 'in_progress'" class="px-4 py-2.5 text-right font-medium">TT</th>
+                                    <th class="px-4 py-2.5 text-right font-medium">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-50">
@@ -197,8 +224,12 @@
                                     <td class="px-4 py-3 text-gray-400 text-xs">{{ idx + 1 }}</td>
                                     <td class="px-4 py-3">
                                         <p class="font-medium text-gray-900">{{ item.service_name }}</p>
+                                        <p v-if="item.stage_name" class="text-xs text-indigo-500 mt-0.5">📋 {{ item.stage_name }}</p>
+                                        <p v-if="item.diagnosis" class="text-xs text-amber-600 mt-0.5">🔍 {{ item.diagnosis }}</p>
                                         <p v-if="item.notes" class="text-xs text-gray-400 mt-0.5">{{ item.notes }}</p>
-                                        <p v-if="item.doctor_name" class="text-xs text-indigo-500 mt-0.5">🦷 {{ item.doctor_name }}
+                                        <p v-if="item.estimated_sessions" class="text-xs text-gray-400 mt-0.5">{{ item.estimated_sessions }} buổi</p>
+                                        <p v-if="item.doctor_name" class="text-xs text-indigo-500 mt-0.5">
+                                            🦷 {{ item.doctor_name }}
                                             <span v-if="item.assistant_name" class="text-gray-400"> · Trợ: {{ item.assistant_name }}</span>
                                         </p>
                                     </td>
@@ -211,7 +242,11 @@
                                     </td>
                                     <td class="px-4 py-3 text-center text-gray-600">{{ item.quantity }}</td>
                                     <td class="px-4 py-3 text-right text-gray-600 tabular-nums">{{ formatVnd(item.unit_price) }}</td>
-                                    <td class="px-4 py-3 text-right font-semibold text-gray-800 tabular-nums">{{ formatVnd(item.subtotal) }}</td>
+                                    <td class="px-4 py-3 text-right tabular-nums">
+                                        <span v-if="item.discount" class="text-rose-500">-{{ formatVnd(item.discount) }}</span>
+                                        <span v-else class="text-gray-300">—</span>
+                                    </td>
+                                    <td class="px-4 py-3 text-right font-semibold text-gray-800 tabular-nums">{{ formatVnd(item.amount || item.subtotal) }}</td>
                                     <td class="px-4 py-3 text-center">
                                         <!-- Inline status radio for in_progress plans -->
                                         <div v-if="plan.status === 'in_progress' && item.status !== 'completed'" class="flex gap-1 justify-center flex-wrap">
@@ -226,7 +261,9 @@
                                         </div>
                                         <StatusBadge v-else :color="item.status_color">{{ item.status_label }}</StatusBadge>
                                     </td>
-                                    <td v-if="plan.is_editable || plan.status === 'in_progress'" class="px-4 py-3 text-right">
+                                    <td class="px-4 py-3 text-right whitespace-nowrap">
+                                        <button @click="openDetail(item)"
+                                            class="text-indigo-500 hover:text-indigo-700 text-xs font-medium hover:underline mr-2">Chi tiết</button>
                                         <button v-if="item.status !== 'completed' && plan.status === 'in_progress'"
                                             @click="completeItem(item.id)"
                                             class="text-emerald-600 hover:text-emerald-800 text-xs font-medium mr-2 hover:underline">✓ Xong</button>
@@ -237,7 +274,7 @@
                                 </tr>
                                 <!-- Total row -->
                                 <tr class="bg-gray-50 border-t border-gray-200">
-                                    <td colspan="5" class="px-4 py-3 text-right text-gray-500 text-xs font-medium">Tổng:</td>
+                                    <td colspan="6" class="px-4 py-3 text-right text-gray-500 text-xs font-medium">Tổng:</td>
                                     <td class="px-4 py-3 text-right font-bold text-gray-900 tabular-nums">{{ formatVnd(plan.total_amount) }}</td>
                                     <td colspan="2"></td>
                                 </tr>
@@ -266,9 +303,9 @@
                         </div>
                     </div>
 
-                    <!-- Discount + Deposit edit -->
+                    <!-- Discount + Deposit + Notes edit -->
                     <div v-if="plan.is_editable" class="bg-white rounded-xl border border-gray-200 p-4">
-                        <h3 class="text-sm font-semibold text-gray-700 mb-3">Giảm giá / Đặt cọc</h3>
+                        <h3 class="text-sm font-semibold text-gray-700 mb-3">Giảm giá / Đặt cọc / Ghi chú</h3>
                         <div class="space-y-2.5">
                             <div>
                                 <label class="text-xs text-gray-500 mb-1 block">Giảm giá (₫)</label>
@@ -280,11 +317,21 @@
                                 <input v-model="updateForm.deposit_amount" type="number" min="0"
                                     class="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none tabular-nums" />
                             </div>
+                            <div>
+                                <label class="text-xs text-gray-500 mb-1 block">Ghi chú kế hoạch</label>
+                                <textarea v-model="updateForm.notes" rows="3" placeholder="Nhập ghi chú..."
+                                    class="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"></textarea>
+                            </div>
                             <button @click="saveFinancials" :disabled="updateForm.processing"
                                 class="w-full py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium">
                                 Lưu
                             </button>
                         </div>
+                    </div>
+                    <!-- Notes readonly when not editable -->
+                    <div v-else-if="plan.notes" class="bg-white rounded-xl border border-gray-200 p-4">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">Ghi chú</h3>
+                        <p class="text-sm text-gray-600 whitespace-pre-wrap">{{ plan.notes }}</p>
                     </div>
 
                     <!-- Payment schedule -->
@@ -334,6 +381,182 @@
                 </div>
             </div>
         </div>
+
+        <!-- ── Item Detail Slide-over ──────────────────────────────────────── -->
+        <Teleport to="body">
+            <Transition
+                enter-active-class="transition-all duration-300 ease-out"
+                enter-from-class="opacity-0"
+                enter-to-class="opacity-100"
+                leave-active-class="transition-all duration-200 ease-in"
+                leave-from-class="opacity-100"
+                leave-to-class="opacity-0">
+                <div v-if="detailItem" class="fixed inset-0 z-50 flex">
+                    <!-- Backdrop -->
+                    <div class="absolute inset-0 bg-black/30" @click="closeDetail"></div>
+                    <!-- Panel -->
+                    <Transition
+                        enter-active-class="transition-transform duration-300 ease-out"
+                        enter-from-class="translate-x-full"
+                        enter-to-class="translate-x-0"
+                        leave-active-class="transition-transform duration-200 ease-in"
+                        leave-from-class="translate-x-0"
+                        leave-to-class="translate-x-full">
+                        <div v-if="detailItem" class="absolute right-0 top-0 h-full w-full max-w-lg bg-white shadow-2xl flex flex-col">
+                            <!-- Header -->
+                            <div class="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50">
+                                <div>
+                                    <h3 class="font-semibold text-gray-900 text-sm">{{ detailItem.service_name }}</h3>
+                                    <p class="text-xs text-gray-400 mt-0.5">Chi tiết dịch vụ điều trị</p>
+                                </div>
+                                <button @click="closeDetail" class="p-1.5 rounded-lg hover:bg-gray-200 text-gray-500">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <!-- Body -->
+                            <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+
+                                <!-- Status badge (readonly) -->
+                                <div class="flex items-center gap-2">
+                                    <StatusBadge :color="detailItem.status_color">{{ detailItem.status_label }}</StatusBadge>
+                                </div>
+
+                                <!-- Row: SL + Đơn giá -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-xs text-gray-500 mb-1 block">Số lượng *</label>
+                                        <input v-model="detailForm.quantity" type="number" min="1"
+                                            :readonly="!plan.is_editable"
+                                            class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none disabled:bg-gray-50"
+                                            :class="plan.is_editable ? '' : 'bg-gray-50 text-gray-500'" />
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 mb-1 block">Đơn giá (₫) *</label>
+                                        <input v-model="detailForm.unit_price" type="number" min="0"
+                                            :readonly="!plan.is_editable"
+                                            class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm tabular-nums focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                            :class="plan.is_editable ? '' : 'bg-gray-50 text-gray-500'" />
+                                    </div>
+                                </div>
+
+                                <!-- Row: Giảm giá + Thành tiền -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-xs text-gray-500 mb-1 block">Giảm giá (₫)</label>
+                                        <input v-model="detailForm.discount" type="number" min="0"
+                                            :readonly="!plan.is_editable"
+                                            class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm tabular-nums focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                            :class="plan.is_editable ? '' : 'bg-gray-50 text-gray-500'" />
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 mb-1 block">Thành tiền</label>
+                                        <div class="rounded-lg border border-gray-100 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700 tabular-nums">
+                                            {{ formatVnd((detailForm.unit_price || 0) * (detailForm.quantity || 1) - (detailForm.discount || 0)) }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Vị trí răng -->
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">Vị trí răng</label>
+                                    <input v-model="detailForm.tooth_number" type="text" placeholder="VD: 11,12,21"
+                                        :readonly="!plan.is_editable"
+                                        class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                        :class="plan.is_editable ? '' : 'bg-gray-50 text-gray-500'" />
+                                </div>
+
+                                <!-- Giai đoạn + Số buổi -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-xs text-gray-500 mb-1 block">Giai đoạn / Đợt</label>
+                                        <input v-model="detailForm.stage_name" type="text" placeholder="VD: Giai đoạn 1"
+                                            :readonly="!plan.is_editable"
+                                            class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                            :class="plan.is_editable ? '' : 'bg-gray-50 text-gray-500'" />
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 mb-1 block">Số buổi dự kiến</label>
+                                        <input v-model="detailForm.estimated_sessions" type="number" min="1" placeholder="VD: 3"
+                                            :readonly="!plan.is_editable"
+                                            class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                            :class="plan.is_editable ? '' : 'bg-gray-50 text-gray-500'" />
+                                    </div>
+                                </div>
+
+                                <!-- Người thực hiện + Trợ thủ -->
+                                <div class="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label class="text-xs text-gray-500 mb-1 block">Người thực hiện</label>
+                                        <select v-if="plan.is_editable" v-model="detailForm.responsible_doctor_id"
+                                            class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                            <option :value="null">-- Chọn bác sĩ --</option>
+                                            <option v-for="d in doctors" :key="d.id" :value="d.id">{{ d.name }}</option>
+                                        </select>
+                                        <div v-else class="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                                            {{ detailItem.doctor_name || '—' }}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="text-xs text-gray-500 mb-1 block">Trợ thủ</label>
+                                        <select v-if="plan.is_editable" v-model="detailForm.assistant_doctor_id"
+                                            class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                            <option :value="null">-- Chọn trợ thủ --</option>
+                                            <option v-for="d in doctors" :key="d.id" :value="d.id">{{ d.name }}</option>
+                                        </select>
+                                        <div v-else class="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-600">
+                                            {{ detailItem.assistant_name || '—' }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Chẩn đoán -->
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">Chẩn đoán</label>
+                                    <input v-model="detailForm.diagnosis" type="text" placeholder="Chẩn đoán..."
+                                        :readonly="!plan.is_editable"
+                                        class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                        :class="plan.is_editable ? '' : 'bg-gray-50 text-gray-500'" />
+                                </div>
+
+                                <!-- Ghi chú -->
+                                <div>
+                                    <label class="text-xs text-gray-500 mb-1 block">Ghi chú</label>
+                                    <textarea v-model="detailForm.notes" rows="3" placeholder="Ghi chú..."
+                                        :readonly="!plan.is_editable"
+                                        class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none resize-none"
+                                        :class="plan.is_editable ? '' : 'bg-gray-50 text-gray-500'"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- Footer actions -->
+                            <div class="px-5 py-4 border-t border-gray-100 bg-gray-50 flex items-center gap-2">
+                                <button v-if="plan.is_editable" @click="saveDetail" :disabled="detailForm.processing"
+                                    class="flex-1 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium">
+                                    Lưu thay đổi
+                                </button>
+                                <button v-if="detailItem.status !== 'completed' && plan.status === 'in_progress'"
+                                    @click="completeItem(detailItem.id); closeDetail()"
+                                    class="px-4 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium">
+                                    ✓ Xong
+                                </button>
+                                <button v-if="plan.is_editable"
+                                    @click="removeItem(detailItem.id); closeDetail()"
+                                    class="px-4 py-2 text-sm border border-red-200 text-red-500 rounded-lg hover:bg-red-50 font-medium">
+                                    Xóa
+                                </button>
+                                <button @click="closeDetail"
+                                    class="px-4 py-2 text-sm border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-100">
+                                    Đóng
+                                </button>
+                            </div>
+                        </div>
+                    </Transition>
+                </div>
+            </Transition>
+        </Teleport>
     </AppLayout>
 </template>
 
@@ -354,22 +577,66 @@ const props = defineProps({
     doctors: Array,
 });
 
-const selectedTeeth   = ref([]);
+const selectedTeeth    = ref([]);
 const treatedTeethList = props.items.filter(i => i.tooth_number).map(i => i.tooth_number);
 
+// Detail slide-over
+const detailItem = ref(null);
+const detailForm = useForm({
+    quantity:               1,
+    unit_price:             0,
+    discount:               0,
+    tooth_number:           '',
+    stage_name:             '',
+    estimated_sessions:     null,
+    responsible_doctor_id:  null,
+    assistant_doctor_id:    null,
+    diagnosis:              '',
+    notes:                  '',
+});
+
+function openDetail(item) {
+    detailItem.value = item;
+    detailForm.quantity              = item.quantity;
+    detailForm.unit_price            = item.unit_price;
+    detailForm.discount              = item.discount ?? 0;
+    detailForm.tooth_number          = item.tooth_number ?? '';
+    detailForm.stage_name            = item.stage_name ?? '';
+    detailForm.estimated_sessions    = item.estimated_sessions ?? null;
+    detailForm.responsible_doctor_id = item.responsible_doctor_id ?? null;
+    detailForm.assistant_doctor_id   = item.assistant_doctor_id ?? null;
+    detailForm.diagnosis             = item.diagnosis ?? '';
+    detailForm.notes                 = item.notes ?? '';
+}
+
+function closeDetail() {
+    detailItem.value = null;
+}
+
+function saveDetail() {
+    detailForm.put(route('clinical.treatment-plan-items.update', detailItem.value.id), {
+        onSuccess: () => closeDetail(),
+    });
+}
+
 const addForm = useForm({
-    service_id:   '',
-    quantity:     1,
-    tooth_number: '',
-    unit_price:   0,
-    doctor_id:    null,
-    assistant_id: null,
-    notes:        '',
+    service_id:           '',
+    quantity:             1,
+    tooth_number:         '',
+    unit_price:           0,
+    discount:             0,
+    stage_name:           '',
+    estimated_sessions:   null,
+    diagnosis:            '',
+    responsible_doctor_id: null,
+    assistant_doctor_id:  null,
+    notes:                '',
 });
 
 const updateForm = useForm({
     discount_amount: props.plan.discount_amount,
     deposit_amount:  props.plan.deposit_amount,
+    notes:           props.plan.notes ?? '',
 });
 
 // Item status options for inline change
@@ -399,7 +666,11 @@ function onTeethSelect(teeth) {
 
 function submitAddItem() {
     addForm.post(route('clinical.treatment-plans.items.store', props.plan.id), {
-        onSuccess: () => { addForm.reset('service_id', 'tooth_number', 'unit_price', 'notes'); selectedTeeth.value = []; },
+        onSuccess: () => {
+            addForm.reset('service_id', 'tooth_number', 'unit_price', 'discount', 'stage_name', 'estimated_sessions', 'diagnosis', 'responsible_doctor_id', 'assistant_doctor_id', 'notes');
+            addForm.quantity = 1;
+            selectedTeeth.value = [];
+        },
     });
 }
 

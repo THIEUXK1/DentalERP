@@ -19,26 +19,38 @@ class TreatmentPlanService
         int $serviceId,
         ?string $toothNumber,
         int $quantity,
-        ?PriceList $priceList = null
+        ?PriceList $priceList = null,
+        array $extra = []
     ): TreatmentPlanItem {
         if (! $plan->status->isEditable()) {
             throw new \RuntimeException('Không thể sửa kế hoạch điều trị ở trạng thái hiện tại.');
         }
 
         $service = DentalService::findOrFail($serviceId);
-        $price = $this->priceResolver->resolve($service, $priceList);
+        $basePrice = $this->priceResolver->resolve($service, $priceList);
+        $price = (isset($extra['unit_price']) && $extra['unit_price'] > 0) ? (int) $extra['unit_price'] : $basePrice;
+        $discount = (int) ($extra['discount'] ?? 0);
         $subtotal = $price * $quantity;
+        $amount   = $subtotal - $discount;
 
-        return DB::transaction(function () use ($plan, $service, $toothNumber, $quantity, $price, $subtotal) {
+        return DB::transaction(function () use ($plan, $service, $toothNumber, $quantity, $price, $discount, $subtotal, $amount, $extra) {
             $item = TreatmentPlanItem::create([
-                'treatment_plan_id' => $plan->id,
-                'service_id' => $service->id,
-                'name' => $service->name,
-                'tooth_number' => $toothNumber,
-                'quantity' => $quantity,
-                'unit_price' => $price,
-                'subtotal' => $subtotal,
-                'status' => TreatmentItemStatus::Pending->value,
+                'treatment_plan_id'    => $plan->id,
+                'service_id'           => $service->id,
+                'name'                 => $service->name,
+                'tooth_number'         => $toothNumber,
+                'quantity'             => $quantity,
+                'unit_price'           => $price,
+                'subtotal'             => $subtotal,
+                'discount'             => $discount,
+                'amount'               => $amount,
+                'notes'                => $extra['notes'] ?? null,
+                'diagnosis'            => $extra['diagnosis'] ?? null,
+                'estimated_sessions'   => $extra['estimated_sessions'] ?? null,
+                'stage_name'           => $extra['stage_name'] ?? null,
+                'responsible_doctor_id' => $extra['responsible_doctor_id'] ?? null,
+                'assistant_doctor_id'   => $extra['assistant_doctor_id'] ?? null,
+                'status'               => TreatmentItemStatus::Pending->value,
             ]);
             $plan->recalcTotals();
 
@@ -46,19 +58,32 @@ class TreatmentPlanService
         });
     }
 
-    public function updateItem(TreatmentPlanItem $item, int $quantity, int $unitPrice, ?string $toothNumber, ?string $notes): void
+    public function updateItem(TreatmentPlanItem $item, array $data): void
     {
         if (! $item->plan->status->isEditable()) {
             throw new \RuntimeException('Không thể sửa kế hoạch điều trị ở trạng thái hiện tại.');
         }
 
-        DB::transaction(function () use ($item, $quantity, $unitPrice, $toothNumber, $notes) {
+        $quantity  = (int) $data['quantity'];
+        $unitPrice = (int) $data['unit_price'];
+        $discount  = (int) ($data['discount'] ?? 0);
+        $subtotal  = $quantity * $unitPrice;
+        $amount    = $subtotal - $discount;
+
+        DB::transaction(function () use ($item, $quantity, $unitPrice, $discount, $subtotal, $amount, $data) {
             $item->update([
-                'quantity' => $quantity,
-                'unit_price' => $unitPrice,
-                'subtotal' => $quantity * $unitPrice,
-                'tooth_number' => $toothNumber,
-                'notes' => $notes,
+                'quantity'              => $quantity,
+                'unit_price'            => $unitPrice,
+                'subtotal'              => $subtotal,
+                'discount'              => $discount,
+                'amount'                => $amount,
+                'tooth_number'          => $data['tooth_number'] ?? null,
+                'notes'                 => $data['notes'] ?? null,
+                'stage_name'            => $data['stage_name'] ?? null,
+                'estimated_sessions'    => $data['estimated_sessions'] ?? null,
+                'diagnosis'             => $data['diagnosis'] ?? null,
+                'responsible_doctor_id' => $data['responsible_doctor_id'] ?? null,
+                'assistant_doctor_id'   => $data['assistant_doctor_id'] ?? null,
             ]);
             $item->plan->recalcTotals();
         });

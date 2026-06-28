@@ -177,7 +177,7 @@ class TreatmentPlanController extends Controller
     {
         $this->authorize('treatment_plans.view');
 
-        $treatmentPlan->load(['patient', 'doctor', 'consultant', 'branch', 'items.service']);
+        $treatmentPlan->load(['patient', 'doctor', 'consultant', 'branch', 'items.service', 'items.responsibleDoctor', 'items.assistantDoctor']);
         $allowed = $treatmentPlan->status->allowedTransitions();
 
         return Inertia::render('Clinical/TreatmentPlans/Show', [
@@ -225,7 +225,11 @@ class TreatmentPlanController extends Controller
                 'discount'     => $i->discount,
                 'amount'       => $i->amount,
                 'estimated_sessions' => $i->estimated_sessions,
-                'stage_name'   => $i->stage_name,
+                'stage_name'         => $i->stage_name,
+                'responsible_doctor_id' => $i->responsible_doctor_id,
+                'assistant_doctor_id'   => $i->assistant_doctor_id,
+                'doctor_name'           => $i->responsibleDoctor?->full_name,
+                'assistant_name'        => $i->assistantDoctor?->full_name,
             ]),
             'services' => DentalService::where('is_active', true)->orderBy('name')->get()
                 ->map(fn ($s) => ['id' => $s->id, 'name' => $s->name, 'selling_price' => $s->selling_price]),
