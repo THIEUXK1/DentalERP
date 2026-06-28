@@ -8,7 +8,9 @@
                 <!-- Basic info -->
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormInput label="Họ tên" :error="form.errors.full_name" required>
-                        <input v-model="form.full_name" type="text" class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" />
+                        <input v-model="form.full_name" type="text"
+                            @input="form.full_name = toTitleCase(form.full_name)"
+                            class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" />
                     </FormInput>
                     <FormInput label="Số điện thoại" :error="form.errors.phone" required>
                         <input v-model="form.phone" type="tel" class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" />
@@ -45,7 +47,9 @@
                 </div>
 
                 <FormInput label="Địa chỉ" :error="form.errors.address">
-                    <input v-model="form.address" type="text" class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" />
+                    <input v-model="form.address" type="text"
+                        @input="form.address = toTitleCase(form.address)"
+                        class="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" />
                 </FormInput>
 
                 <!-- Medical info -->
@@ -138,7 +142,15 @@ const form = useForm({
     is_active:         props.patient?.is_active ?? true,
 });
 
+// Viết hoa chữ cái đầu mỗi từ (hỗ trợ tiếng Việt)
+function toTitleCase(str) {
+    if (!str) return '';
+    return str.replace(/(^|[\s,\-\/])(\S)/g, (_, sep, char) => sep + char.toUpperCase());
+}
+
 function submit() {
+    form.full_name = toTitleCase(form.full_name);
+    form.address   = toTitleCase(form.address);
     if (props.patient) {
         form.put(route('patients.update', props.patient.id));
     } else {
